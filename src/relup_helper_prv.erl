@@ -25,7 +25,7 @@ init(State) ->
 
 -spec do(rebar_state:t()) -> {ok, rebar_state:t()} | {error, string()}.
 do(State) ->
-    io:format("paths now:", [code:get_path()]),
+    io:format("paths now:~p~n", [code:get_path()]),
     {ok, State}.
 
 -spec format_error(any()) ->  iolist().
