@@ -7,16 +7,16 @@
 parse_transform(AST, _Opts) ->
     case os:getenv("BUILD_VERSION") of
         false -> AST;
-        Vsn -> trans(AST, Vsn, [])
+        Vsn -> trans(AST, Vsn, false, [])
     end.
 
-trans([], _Vsn, ResAST) ->
+trans([], _Vsn, _Changed, ResAST) ->
     lists:reverse(ResAST);
-trans([{eof, L} | AST], _Vsn, ResAST) ->
+trans([{eof, L} | AST], _Vsn, _Changed, ResAST) ->
     lists:reverse([{eof, L} | ResAST]) ++ AST;
-trans([{attribute, _L, vsn, _Vsn} | AST], Vsn, ResAST) ->
-    trans(AST, Vsn, ResAST);
-trans([{function,L,_,_, _} | AST], Vsn, ResAST) ->
-    trans(AST, Vsn, [{attribute, L, vsn, Vsn} | ResAST]);
-trans([F | AST], Vsn, ResAST) ->
-    trans(AST, Vsn, [F | ResAST]).
+trans([{attribute, _L, vsn, _Vsn} | AST], Vsn, Changed, ResAST) ->
+    trans(AST, Vsn, Changed, ResAST);
+trans([F = {function,L,_,_, _} | AST], Vsn, false, ResAST) ->
+    trans(AST, Vsn, true, [F, {attribute, L, vsn, Vsn} | ResAST]);
+trans([F | AST], Vsn, Changed, ResAST) ->
+    trans(AST, Vsn, Changed, [F | ResAST]).
