@@ -2,16 +2,21 @@
 
 -export([parse_transform/2]).
 
+-vsn("0.1.0").
+
 parse_transform(AST, _Opts) ->
     case os:getenv("BUILD_VERSION") of
-        false -> io:format("--- BUILD_VERSION not found ~n", []), AST;
-        Vsn -> trans(Vsn, AST)
+        false -> AST;
+        Vsn -> trans(AST, Vsn, [])
     end.
 
-trans(Vsn, AST) ->
-    lists:map(
-        fun ({attribute, L, vsn, _OldVsn}) ->
-                io:format("--- changing vsn from ~p to ~p~n", [_OldVsn, Vsn]),
-                {attribute, L, vsn, Vsn};
-            (Token) -> Token
-        end, AST).
+trans([], _Vsn, ResAST) ->
+    lists:reverse(ResAST);
+trans([{eof, L} | AST], _Vsn, ResAST) ->
+    lists:reverse([{eof, L} | ResAST]) ++ AST;
+trans([{attribute, _L, vsn, _Vsn} | AST], Vsn, ResAST) ->
+    trans(AST, Vsn, ResAST);
+trans([{function,L,_,_, _} | AST], Vsn, ResAST) ->
+    trans(AST, Vsn, [{attribute, L, vsn, Vsn} | ResAST]);
+trans([F | AST], Vsn, ResAST) ->
+    trans(AST, Vsn, [F | ResAST]).
