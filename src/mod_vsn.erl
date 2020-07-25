@@ -3,7 +3,7 @@
 -export([parse_transform/2]).
 
 parse_transform(AST, _Opts) ->
-    case os:getenv("EMQX_DEPS_DEFAULT_VSN") of
+    case os:getenv("PKG_VSN") of
         false -> AST;
         Vsn -> trans(AST, Vsn, false, [])
     end.
