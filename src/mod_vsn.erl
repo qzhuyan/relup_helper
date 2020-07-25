@@ -2,10 +2,8 @@
 
 -export([parse_transform/2]).
 
--vsn("0.1.0").
-
 parse_transform(AST, _Opts) ->
-    case os:getenv("BUILD_VERSION") of
+    case os:getenv("EMQX_DEPS_DEFAULT_VSN") of
         false -> AST;
         Vsn -> trans(AST, Vsn, false, [])
     end.
