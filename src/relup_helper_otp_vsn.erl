@@ -1,8 +1,10 @@
--module(relup_helper_prv).
+-module(relup_helper_otp_vsn).
+
+-define(supported_pre_vsns(_CurrVsn), <<".*">>).
 
 -export([init/1, do/1, format_error/1]).
 
--define(PROVIDER, relup_helper).
+-define(PROVIDER, otp_vsn).
 -define(DEPS, [app_discovery]).
 
 %% ===================================================================
@@ -11,22 +13,22 @@
 -spec init(rebar_state:t()) -> {ok, rebar_state:t()}.
 init(State) ->
     Provider = providers:create([
+            {namespace, relup_helper},
             {name, ?PROVIDER},            % The 'user friendly' name of the task
             {module, ?MODULE},            % The module implementation of the task
             {bare, true},                 % The task can be run by the user, always true
             {deps, ?DEPS},                % The list of dependencies
-            {example, "rebar3 relup_helper"}, % How to use the plugin
+            {example, "rebar3 relup_helper otp_vsn"}, % How to use the plugin
             {opts, []},                   % list of options understood by the plugin
-            {short_desc, "A relup helper tool"},
-            {desc, "A rebar3 tool that helps create release upgrade packages"}
+            {short_desc, "include OTP_VERSION file into release"},
+            {desc, "A rebar3 tool that helps copy the OTP_VERSION from current building\n"
+                   "system to the emqx release package"}
     ]),
     {ok, rebar_state:add_provider(State, Provider)}.
-
 
 -spec do(rebar_state:t()) -> {ok, rebar_state:t()} | {error, string()}.
 do(State) ->
     include_otp_version(State),
-    gen_appups:do(State),
     {ok, State}.
 
 -spec format_error(any()) ->  iolist().
