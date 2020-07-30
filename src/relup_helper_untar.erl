@@ -1,11 +1,13 @@
 -module(relup_helper_untar).
 
+-include("include/relup_helper.hrl").
+
 -define(supported_pre_vsns(_CurrVsn), <<".*">>).
 
 -export([init/1, do/1, format_error/1]).
 
 -define(PROVIDER, untar).
--define(DEPS, [app_discovery]).
+-define(DEPS, [{default, release}]).
 
 %% ===================================================================
 %% Public API
@@ -30,6 +32,7 @@ init(State) ->
 do(State) ->
     BaseDir = rebar_dir:base_dir(State),
     {ok, CWD} = file:get_cwd(),
+    ?LOG(info, "untar at cwd: ~p", [CWD]),
     untar_and_copy(tar, filename:join([CWD, "*.tar.gz"]), BaseDir),
     untar_and_copy(zip, filename:join([CWD, "*.zip"]), BaseDir),
     {ok, State}.
@@ -62,16 +65,16 @@ copy_dirs(SrcPath, DstPath) ->
      end|| PrevD <- filelib:wildcard(SrcPath0), filelib:is_dir(PrevD)].
 
 untar_pre_vsn_packages(tar, Ball, TmpDir) ->
-    Cmd = io_lib:format("tar zxf ~s -C ~s~n", [Ball, TmpDir]),
+    Cmd = io_lib:format("tar zxf ~s -C ~s", [Ball, TmpDir]),
     run_cmd(Cmd, true);
 untar_pre_vsn_packages(zip, Ball, TmpDir) ->
-    Cmd = io_lib:format("unzip -q ~s -d ~s~n", [Ball, TmpDir]),
+    Cmd = io_lib:format("unzip -q ~s -d ~s", [Ball, TmpDir]),
     run_cmd(Cmd, true).
 
 do_copy(SrcPath, DstPath) ->
-    Cmd = io_lib:format("cp -r ~s ~s~n", [SrcPath, DstPath]),
+    Cmd = io_lib:format("cp -r ~s ~s", [SrcPath, DstPath]),
     run_cmd(Cmd, true).
 
 run_cmd(Cmd, Debug) ->
-    Debug andalso io:format(Cmd),
+    Debug andalso ?LOG(debug, Cmd, []),
     os:cmd(Cmd).

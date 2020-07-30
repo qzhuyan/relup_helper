@@ -1,11 +1,13 @@
 -module(relup_helper_gen_appups).
 
+-include("include/relup_helper.hrl").
+
 -define(supported_pre_vsns(_CurrVsn), <<".*">>).
 
 -export([init/1, do/1, format_error/1]).
 
 -define(PROVIDER, gen_appups).
--define(DEPS, [app_discovery]).
+-define(DEPS, [{default, compile}]).
 
 %% ===================================================================
 %% Public API
@@ -29,6 +31,7 @@ init(State) ->
 
 -spec do(rebar_state:t()) -> {ok, rebar_state:t()} | {error, string()}.
 do(State) ->
+    ?LOG(info, "running gen_appups", []),
     gen_appups(rebar_dir:base_dir(State)),
     {ok, State}.
 
@@ -63,7 +66,7 @@ gen_appups(BaseDir) ->
      end || Dir <- filelib:wildcard(filename:join([BaseDir, "lib", "*"])), filelib:is_dir(Dir)].
 
 write_file(Filename, Text) ->
-    io:format("writing to file: ~p~n", [Filename]),
+    ?LOG(debug, "writing to file: ~p", [Filename]),
     ok = file:write_file(Filename, Text).
 
 appup_text(RelVsn) ->
