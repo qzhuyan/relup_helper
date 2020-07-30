@@ -32,16 +32,18 @@ init(State) ->
 do(State) ->
     BaseDir = rebar_dir:base_dir(State),
     {ok, CWD} = file:get_cwd(),
-    ?LOG(info, "untar at cwd: ~p", [CWD]),
-    untar_and_copy(tar, filename:join([CWD, "*.tar.gz"]), BaseDir),
-    untar_and_copy(zip, filename:join([CWD, "*.zip"]), BaseDir),
+    Tarballs = filelib:wildcard(filename:join([CWD, "*.tar.gz"])),
+    Zipballs = filelib:wildcard(filename:join([CWD, "*.zip"])),
+    ?LOG(info, "untar previous versions of balls: ~p", [Tarballs ++ Zipballs]),
+    uncompress_and_copy(tar, Tarballs, BaseDir),
+    uncompress_and_copy(zip, Zipballs, BaseDir),
     {ok, State}.
 
 -spec format_error(any()) ->  iolist().
 format_error(Reason) ->
     io_lib:format("~p", [Reason]).
 
-untar_and_copy(Type, Pattern, BaseDir) ->
+uncompress_and_copy(Type, Balls, BaseDir) ->
     [begin
         TmpDir = filename:join(["/tmp", "emqx_untar", integer_to_list(erlang:system_time())]),
         ok = filelib:ensure_dir(filename:join([TmpDir, "dummy"])),
@@ -49,7 +51,7 @@ untar_and_copy(Type, Pattern, BaseDir) ->
         copy_dirs([TmpDir, "emqx", "lib", "*"], [BaseDir, "rel", "emqx", "lib"]),
         copy_dirs([TmpDir, "emqx", "releases", "*"], [BaseDir, "rel", "emqx", "releases"]),
         file:del_dir(TmpDir)
-     end || Ball <- filelib:wildcard(Pattern), filelib:is_file(Ball)].
+     end || Ball <- Balls, filelib:is_file(Ball)].
 
 copy_dirs(SrcPath, DstPath) ->
     SrcPath0 = filename:join(SrcPath),
