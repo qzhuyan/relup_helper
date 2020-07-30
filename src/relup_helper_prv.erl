@@ -25,9 +25,17 @@ init(State) ->
 
 -spec do(rebar_state:t()) -> {ok, rebar_state:t()} | {error, string()}.
 do(State) ->
+    include_otp_version(State),
     gen_appups:do(State),
     {ok, State}.
 
 -spec format_error(any()) ->  iolist().
 format_error(Reason) ->
     io_lib:format("~p", [Reason]).
+
+include_otp_version(State) ->
+    OTP_VSN_DST = filename:join([rebar_dir:base_dir(State), "rel", "emqx", "etc", "OTP_VERSION"]),
+    file:delete(OTP_VSN_DST),
+    OTP_VSN_SRC = filename:join([code:root_dir(), "releases", erlang:system_info(otp_release), "OTP_VERSION"]),
+    io:format("--- cp ~s ~s~n", [OTP_VSN_SRC, OTP_VSN_DST]),
+    file:copy(OTP_VSN_SRC, OTP_VSN_DST).
