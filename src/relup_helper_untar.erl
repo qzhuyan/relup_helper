@@ -46,7 +46,6 @@ format_error(Reason) ->
 uncompress_and_copy(Type, Balls, BaseDir) ->
     [begin
         TmpDir = filename:join(["/tmp", "emqx_untar", integer_to_list(erlang:system_time())]),
-        ok = filelib:ensure_dir(filename:join([TmpDir, "dummy"])),
         untar_pre_vsn_packages(Type, Ball, TmpDir),
         copy_dirs([TmpDir, "emqx", "lib", "*"], [BaseDir, "rel", "emqx", "lib"]),
         copy_dirs([TmpDir, "emqx", "releases", "*"], [BaseDir, "rel", "emqx", "releases"]),
@@ -67,16 +66,25 @@ copy_dirs(SrcPath, DstPath) ->
      end|| PrevD <- filelib:wildcard(SrcPath0), filelib:is_dir(PrevD)].
 
 untar_pre_vsn_packages(tar, Ball, TmpDir) ->
-    Cmd = io_lib:format("tar zxf ~s -C ~s", [Ball, TmpDir]),
-    run_cmd(Cmd, true);
+    UnTarDir = filename:join([TmpDir, "emqx"]),
+    ok = filelib:ensure_dir(filename:join([UnTarDir, "dummy"])),
+    Cmd = io_lib:format("tar zxf ~s -C ~s", [Ball, UnTarDir]),
+    {ok,_} = run_cmd(Cmd, debug);
 untar_pre_vsn_packages(zip, Ball, TmpDir) ->
+    ok = filelib:ensure_dir(filename:join([TmpDir, "dummy"])),
     Cmd = io_lib:format("unzip -q ~s -d ~s", [Ball, TmpDir]),
-    run_cmd(Cmd, true).
+    {ok,_} = run_cmd(Cmd, debug).
 
 do_copy(SrcPath, DstPath) ->
     Cmd = io_lib:format("cp -r ~s ~s", [SrcPath, DstPath]),
-    run_cmd(Cmd, true).
+    {ok,_} = run_cmd(Cmd, debug).
 
-run_cmd(Cmd, Debug) ->
-    Debug andalso ?LOG(debug, Cmd, []),
-    os:cmd(Cmd).
+run_cmd(Cmd, LogLevel) ->
+    LogLevel =/= nolog andalso ?LOG(LogLevel, Cmd, []),
+    case rebar_utils:sh(Cmd, [return_on_error]) of
+        {ok, Result} -> {ok, Result};
+        {error, {Code, Details}} ->
+            ?LOG(error, "`~p` failed with exit code: ~p~n", [Cmd, Code]),
+            ?LOG(error, "~s~n", [Details]),
+            failed
+    end.
