@@ -50,18 +50,22 @@ gen_appups(BaseDir) ->
         end,
         AppupText = appup_text(RelVsn),
         AppupFile = filename:join([Dir, "ebin", AppName++".appup"]),
-        case filelib:is_file(AppupFile) of
-            true -> %% already exists
+        AppupSrcFile = filename:join([Dir, "src", AppName++".appup.src"]),
+        case {filelib:is_file(AppupSrcFile), filelib:is_file(AppupFile)} of
+            {true, _} -> %% .appup.src file in src exists, copy it to ebin
+                {ok, _} = file:copy(AppupSrcFile, AppupFile),
+                {Dir, ok};
+            {false, true} -> %% .appup file in ebin already exists
                 case file:consult(AppupFile) of
                     {ok, [{RelVsn, _, _}]} -> %% keep the appup file
-                        skip;
+                        {Dir, skip};
                     {ok, [{_OtherVsn, _, _}]} -> %% replace the old file
-                        write_file(AppupFile, AppupText);
+                        {Dir, write_file(AppupFile, AppupText)};
                     _ ->
-                        write_file(AppupFile, AppupText)
+                        {Dir, write_file(AppupFile, AppupText)}
                 end;
-            false -> %% no appup file, create one
-                write_file(AppupFile, AppupText)
+            {false, false} -> %% no appup file, create one
+                {Dir, write_file(AppupFile, AppupText)}
         end
      end || Dir <- filelib:wildcard(filename:join([BaseDir, "lib", "*"])), filelib:is_dir(Dir)].
 
