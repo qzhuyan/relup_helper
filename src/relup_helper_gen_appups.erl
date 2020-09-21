@@ -42,17 +42,7 @@ format_error(Reason) ->
 gen_appups(BaseDir) ->
     [begin
         AppName = filename:basename(Dir),
-        AppFile = filename:join([Dir, "ebin", AppName++".app"]),
-        Attrs = case file:consult(AppFile) of
-            {ok, [{_, _, Attrs0}]} ->
-               Attrs0;
-            {error, Error} ->
-               error({file_consult, {AppFile, Error}})
-        end,
-        RelVsn = case proplists:get_value(vsn, Attrs) of
-            undefined -> error({no_vsn_found, AppFile});
-            Vsn -> Vsn
-        end,
+        RelVsn = vsn_from_app_file(filename:join([Dir, "ebin", "*.app"])),
         AppupText = appup_text(RelVsn),
         AppupFile = filename:join([Dir, "ebin", AppName++".appup"]),
         AppupSrcFile = filename:join([Dir, "src", AppName++".appup.src"]),
@@ -84,3 +74,19 @@ appup_text(RelVsn) ->
             [{?supported_pre_vsns(RelVsn), []}], % Upgrade from
             [{?supported_pre_vsns(RelVsn), []}]  % Downgrade to
          }]).
+
+vsn_from_app_file(AppFileWildcard) ->
+    case filelib:wildcard(AppFileWildcard) of
+        [] -> error({no_app_file, AppFileWildcard});
+        [AppFile] ->
+            case file:consult(AppFile) of
+                {ok, [{_, _, Attrs0}]} ->
+                    case proplists:get_value(vsn, Attrs0) of
+                        undefined -> error({no_vsn_found, AppFile});
+                        Vsn -> Vsn
+                    end;
+                {error, Error} -> error({consult_app_file, {AppFile, Error}})
+            end;
+        MultAppFiles ->
+            error({multi_app_files_found, MultAppFiles})
+    end.
