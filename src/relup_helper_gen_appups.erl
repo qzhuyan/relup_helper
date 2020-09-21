@@ -43,7 +43,12 @@ gen_appups(BaseDir) ->
     [begin
         AppName = filename:basename(Dir),
         AppFile = filename:join([Dir, "ebin", AppName++".app"]),
-        {ok, [{_, _, Attrs}]} = file:consult(AppFile),
+        Attrs = case file:consult(AppFile) of
+            {ok, [{_, _, Attrs0}]} ->
+               Attrs0;
+            {error, Error} ->
+               error({file_consult, {AppFile, Error}})
+        end,
         RelVsn = case proplists:get_value(vsn, Attrs) of
             undefined -> error({no_vsn_found, AppFile});
             Vsn -> Vsn
