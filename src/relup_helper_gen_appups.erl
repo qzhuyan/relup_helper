@@ -41,8 +41,7 @@ format_error(Reason) ->
 
 gen_appups(BaseDir) ->
     [begin
-        AppName = filename:basename(Dir),
-        RelVsn = vsn_from_app_file(filename:join([Dir, "ebin", "*.app"])),
+        {AppName,RelVsn} = vsn_from_app_file(filename:join([Dir, "ebin", "*.app"])),
         AppupText = appup_text(RelVsn),
         AppupFile = filename:join([Dir, "ebin", AppName++".appup"]),
         AppupSrcFile = filename:join([Dir, "src", AppName++".appup.src"]),
@@ -80,13 +79,17 @@ vsn_from_app_file(AppFileWildcard) ->
         [] -> error({no_app_file, AppFileWildcard});
         [AppFile] ->
             case file:consult(AppFile) of
-                {ok, [{_, _, Attrs0}]} ->
+                {ok, [{_, AppName, Attrs0}]} ->
                     case proplists:get_value(vsn, Attrs0) of
                         undefined -> error({no_vsn_found, AppFile});
-                        Vsn -> Vsn
+                        Vsn -> {str(AppName),Vsn}
                     end;
                 {error, Error} -> error({consult_app_file, {AppFile, Error}})
             end;
         MultAppFiles ->
             error({multi_app_files_found, MultAppFiles})
     end.
+
+str(Bin) when is_binary(Bin) -> binary_to_list(Bin);
+str(Atom) when is_atom(Atom) -> atom_to_list(Atom);
+str(Str) when is_list(Str) -> Str.
