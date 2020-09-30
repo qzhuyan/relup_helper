@@ -32,7 +32,8 @@ init(State) ->
 -spec do(rebar_state:t()) -> {ok, rebar_state:t()} | {error, string()}.
 do(State) ->
     ?LOG(info, "running gen_appups", []),
-    gen_appups(rebar_dir:base_dir(State)),
+    Res = gen_appups(rebar_dir:base_dir(State)),
+    ?LOG(debug, "gen_appups results: ~p", [Res]),
     {ok, State}.
 
 -spec format_error(any()) ->  iolist().
@@ -46,9 +47,9 @@ gen_appups(BaseDir) ->
         AppupFile = filename:join([Dir, "ebin", AppName++".appup"]),
         AppupSrcFile = filename:join([Dir, "src", AppName++".appup.src"]),
         case {filelib:is_file(AppupSrcFile), filelib:is_file(AppupFile)} of
-            {true, _} -> %% .appup.src file in src exists, copy it to ebin
-                {ok, _} = file:copy(AppupSrcFile, AppupFile),
-                {Dir, ok};
+            {true, _} -> %% .appup.src file in src exists, copy the content to ebin
+                {ok, AppupText1} = file:script(AppupSrcFile),
+                {Dir, write_file(AppupFile, io_lib:format("~p.", [AppupText1]))};
             {false, true} -> %% .appup file in ebin already exists
                 case file:consult(AppupFile) of
                     {ok, [{RelVsn, _, _}]} -> %% keep the appup file
