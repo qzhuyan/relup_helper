@@ -48,8 +48,13 @@ gen_appups(BaseDir) ->
         AppupSrcFile = filename:join([Dir, "src", AppName++".appup.src"]),
         case {filelib:is_file(AppupSrcFile), filelib:is_file(AppupFile)} of
             {true, _} -> %% .appup.src file in src exists, copy the content to ebin
-                {ok, AppupText1} = file:script(AppupSrcFile),
-                {Dir, write_file(AppupFile, io_lib:format("~p.", [AppupText1]))};
+                case file:script(AppupSrcFile) of
+                    {ok, AppupText1} ->
+                        {Dir, write_file(AppupFile, io_lib:format("~p.", [AppupText1]))};
+                    {error, Error} ->
+                        ?LOG(debug, "read_appup_src_error: ~p", [{AppupSrcFile,Error}]),
+                        error({read_appup_src_error, AppupSrcFile, Error})
+                end;
             {false, true} -> %% .appup file in ebin already exists
                 case file:consult(AppupFile) of
                     {ok, [{RelVsn, _, _}]} -> %% keep the appup file
