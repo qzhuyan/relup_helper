@@ -48,7 +48,7 @@ gen_appups(BaseDir) ->
         AppupSrcFile = filename:join([Dir, "src", AppName++".appup.src"]),
         case {filelib:is_file(AppupSrcFile), filelib:is_file(AppupFile)} of
             {true, _} -> %% .appup.src file in src exists, copy the content to ebin
-                case file:script(AppupSrcFile) of
+                case file:script(AppupSrcFile, [{'VSN', RelVsn}]) of
                     {ok, AppupText1} ->
                         {Dir, write_file(AppupFile, io_lib:format("~p.", [AppupText1]))};
                     {error, Error} ->
