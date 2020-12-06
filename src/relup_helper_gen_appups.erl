@@ -67,7 +67,10 @@ gen_appups(BaseDir) ->
             {false, false} -> %% no appup file, create one
                 {Dir, write_file(AppupFile, AppupText)}
         end
-     end || Dir <- filelib:wildcard(filename:join([BaseDir, "lib", "*"])), filelib:is_dir(Dir)].
+     end || Dir <- filelib:wildcard(filename:join([BaseDir, "lib", "*"])), is_app_dir(Dir)].
+
+is_app_dir(Dir) ->
+    filename:basename(Dir) =/= ".rebar3" andalso filelib:is_dir(Dir).
 
 write_file(Filename, Text) ->
     ?LOG(debug, "writing to file: ~p", [Filename]),
