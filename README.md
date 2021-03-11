@@ -1,15 +1,21 @@
-relup_helper
-=====
+# relup_helper
 
-A rebar plugin
+A rebar plugin for https://github.com/emqx/emqx relup generation
 
-Build
------
+## Branches
+
+Starting from EMQ X v4.3, [emqx](https://github.com/emqx/emqx) starts to pin
+release tags of this repo.
+
+`main` branch is forked from commit e38a9d4 and made to be the default branch.
+
+`master` branch should not be deleted as it is used by emqx old version releases.
+
+## Build
 
     $ rebar3 compile
 
-Use
----
+## Use
 
 Add the plugin to your rebar config:
 
