@@ -32,7 +32,7 @@ init(State) ->
 -spec do(rebar_state:t()) -> {ok, rebar_state:t()} | {error, string()}.
 do(State) ->
     ?LOG(info, "running gen_appups", []),
-    Res = gen_appups(rebar_dir:base_dir(State)),
+    Res = gen_appups(State),
     ?LOG(debug, "gen_appups results: ~p", [Res]),
     {ok, State}.
 
@@ -40,12 +40,22 @@ do(State) ->
 format_error(Reason) ->
     io_lib:format("~p", [Reason]).
 
-gen_appups(BaseDir) ->
+gen_appups(State) ->
+    Apps = rebar_state:project_apps(State) ++ rebar_state:all_deps(State),
+    ?LOG(info, "Total apps: ~p~n  ~p~n", [length(Apps), lists:map(fun rebar_app_info:name/1, Apps)]),
     [begin
-        {AppName,RelVsn} = vsn_from_app_file(filename:join([Dir, "ebin", "*.app"])),
+        Dir = rebar_app_info:dir(App),
+        AppName = str(rebar_app_info:name(App)),
+        RelVsn = case rebar_app_info:is_checkout(App) of
+                     true ->
+                         rebar_app_info:original_vsn(App);
+                     false ->
+                         rebar_app_info:vsn(App)
+                 end,
         AppupText = appup_text(RelVsn),
-        AppupFile = filename:join([Dir, "ebin", AppName++".appup"]),
-        AppupSrcFile = filename:join([Dir, "src", AppName++".appup.src"]),
+        AppupFile = filename:join(rebar_app_info:ebin_dir(App), AppName++".appup"),
+        AppupSrcFile = filename:join(filename:dirname(rebar_app_info:app_file_src(App)),
+                                     AppName++".appup.src"),
         case {filelib:is_file(AppupSrcFile), filelib:is_file(AppupFile)} of
             {true, _} -> %% .appup.src file in src exists, copy the content to ebin
                 case file:script(AppupSrcFile, [{'VSN', RelVsn}]) of
@@ -67,13 +77,11 @@ gen_appups(BaseDir) ->
             {false, false} -> %% no appup file, create one
                 {Dir, write_file(AppupFile, AppupText)}
         end
-     end || Dir <- filelib:wildcard(filename:join([BaseDir, "lib", "*"])), is_app_dir(Dir)].
-
-is_app_dir(Dir) ->
-    filename:basename(Dir) =/= ".rebar3" andalso filelib:is_dir(Dir).
+     end || App <- Apps].
 
 write_file(Filename, Text) ->
     ?LOG(debug, "writing to file: ~p", [Filename]),
+    ok = filelib:ensure_dir(Filename),
     ok = file:write_file(Filename, Text).
 
 appup_text(RelVsn) ->
@@ -82,22 +90,6 @@ appup_text(RelVsn) ->
             [{?supported_pre_vsns(RelVsn), []}], % Upgrade from
             [{?supported_pre_vsns(RelVsn), []}]  % Downgrade to
          }]).
-
-vsn_from_app_file(AppFileWildcard) ->
-    case filelib:wildcard(AppFileWildcard) of
-        [] -> error({no_app_file, AppFileWildcard});
-        [AppFile] ->
-            case file:consult(AppFile) of
-                {ok, [{_, AppName, Attrs0}]} ->
-                    case proplists:get_value(vsn, Attrs0) of
-                        undefined -> error({no_vsn_found, AppFile});
-                        Vsn -> {str(AppName),Vsn}
-                    end;
-                {error, Error} -> error({consult_app_file, {AppFile, Error}})
-            end;
-        MultAppFiles ->
-            error({multi_app_files_found, MultAppFiles})
-    end.
 
 str(Bin) when is_binary(Bin) -> binary_to_list(Bin);
 str(Atom) when is_atom(Atom) -> atom_to_list(Atom);
